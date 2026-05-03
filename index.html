@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake 🐍</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
+</head>
+<body data-skin="classique">
+
+  <!-- Navigation -->
+  <nav class="nav-bar">
+    <a href="../" class="btn-hub">&#8592; Ma Collection</a>
+    <span class="nav-title">🐍 Snake</span>
+    <div class="nav-actions">
+      <button id="btn-mute" class="btn-icon" title="Muet">🔊</button>
+      <button id="btn-settings" class="btn-icon" title="Paramètres">⚙️</button>
+    </div>
+  </nav>
+
+  <!-- Main Layout -->
+  <main class="main-layout">
+
+    <!-- Game Section -->
+    <section class="game-section">
+
+      <!-- Header: Mode + Skin -->
+      <div class="game-header">
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="classic">Classique</button>
+          <button class="mode-tab" data-mode="infinite">Infini</button>
+        </div>
+        <div class="skin-tabs">
+          <button class="skin-tab active" data-skin="classique" title="Classique">🟢</button>
+          <button class="skin-tab" data-skin="neon" title="Néon">💜</button>
+          <button class="skin-tab" data-skin="pixel" title="Pixel Art">🕹️</button>
+          <button class="skin-tab" data-skin="degrade" title="Dégradé">🌈</button>
+          <button class="skin-tab" data-skin="clair" title="Clair">☀️</button>
+        </div>
+      </div>
+
+      <!-- Canvas + Overlays -->
+      <div class="canvas-container" id="swipe-zone">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Start Screen -->
+        <div class="overlay" id="overlay-start">
+          <div class="overlay-card">
+            <div class="overlay-icon">🐍</div>
+            <h2>Snake</h2>
+            <p class="overlay-subtitle">Mode : <strong id="mode-label-start">Classique</strong></p>
+            <button class="btn-primary" id="btn-start">Jouer</button>
+            <p class="controls-hint desktop-only">Flèches / ZQSD pour diriger</p>
+            <p class="controls-hint mobile-only">Swipe pour diriger</p>
+          </div>
+        </div>
+
+        <!-- Pause Screen -->
+        <div class="overlay hidden" id="overlay-pause">
+          <div class="overlay-card">
+            <div class="overlay-icon">⏸</div>
+            <h2>Pause</h2>
+            <button class="btn-primary" id="btn-resume">Reprendre</button>
+            <button class="btn-secondary" id="btn-restart-pause">Recommencer</button>
+          </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="overlay hidden" id="overlay-gameover">
+          <div class="overlay-card">
+            <div class="overlay-icon">💀</div>
+            <h2>Game Over</h2>
+            <div class="stats-grid" id="stats-grid"></div>
+            <div class="share-row">
+              <span class="final-score" id="final-score">0 pts</span>
+              <button class="btn-share" id="btn-share" title="Copier le score">📋</button>
+            </div>
+            <div class="rank-display hidden" id="rank-display"></div>
+            <button class="btn-primary" id="btn-restart">Rejouer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD -->
+      <div class="hud">
+        <div class="hud-block">
+          <span class="hud-label">Score</span>
+          <span class="hud-value" id="hud-score">0</span>
+        </div>
+        <div class="hud-block">
+          <span class="hud-label">Record</span>
+          <span class="hud-value" id="hud-best">0</span>
+        </div>
+        <div class="hud-block">
+          <span class="hud-label">Mode</span>
+          <span class="hud-value" id="hud-mode">Classique</span>
+        </div>
+        <div class="hud-block powerup-block hidden" id="powerup-block">
+          <span class="hud-label">Power-Up</span>
+          <span class="hud-value powerup-val" id="hud-powerup">—</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="game-controls">
+        <button class="btn-control" id="btn-play-pause">▶ Jouer</button>
+        <button class="btn-control" id="btn-restart-ctrl">↺ Restart</button>
+      </div>
+
+      <!-- D-Pad (mobile) -->
+      <div class="dpad" id="dpad">
+        <button class="dpad-btn" id="dpad-up" data-dir="UP">▲</button>
+        <div class="dpad-row">
+          <button class="dpad-btn" id="dpad-left" data-dir="LEFT">◀</button>
+          <button class="dpad-btn dpad-center" id="dpad-mid">⏸</button>
+          <button class="dpad-btn" id="dpad-right" data-dir="RIGHT">▶</button>
+        </div>
+        <button class="dpad-btn" id="dpad-down" data-dir="DOWN">▼</button>
+      </div>
+
+    </section>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- Leaderboard -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3>🏆 Top 5</h3>
+          <button class="btn-text" id="btn-clear-scores">Effacer</button>
+        </div>
+        <ol class="leaderboard-list" id="leaderboard-list">
+          <li class="lb-empty">Aucun score</li>
+        </ol>
+        <p class="rank-msg hidden" id="rank-msg"></p>
+      </div>
+
+      <!-- Current Skin Info -->
+      <div class="panel skin-info-panel">
+        <h3 id="skin-name-display">🎨 Classique</h3>
+        <p class="skin-desc" id="skin-desc">Couleurs vives, style rétro</p>
+        <div class="skin-preview-bar" id="skin-preview-bar"></div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop hidden" id="modal-settings">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>⚙️ Paramètres</h2>
+        <button class="btn-icon" id="close-settings">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <div class="setting-group">
+          <label class="setting-label">
+            🎵 Volume musique
+            <span class="setting-val" id="val-music">40%</span>
+          </label>
+          <input class="slider" type="range" id="slider-music" min="0" max="100" value="40">
+        </div>
+
+        <div class="setting-group">
+          <label class="setting-label">
+            🔊 Volume effets
+            <span class="setting-val" id="val-sfx">70%</span>
+          </label>
+          <input class="slider" type="range" id="slider-sfx" min="0" max="100" value="70">
+        </div>
+
+        <div class="setting-group">
+          <label class="setting-label">
+            ⚡ Vitesse de base
+            <span class="setting-val" id="val-speed">5</span>
+          </label>
+          <input class="slider" type="range" id="slider-speed" min="1" max="10" value="5">
+        </div>
+
+        <div class="setting-group">
+          <label class="setting-label">
+            📐 Taille de grille
+          </label>
+          <select class="select-input" id="sel-grid">
+            <option value="15">Petite (15×15)</option>
+            <option value="20" selected>Normale (20×20)</option>
+            <option value="25">Grande (25×25)</option>
+          </select>
+        </div>
+
+        <div class="setting-group">
+          <label class="setting-label">
+            🐍 Épaisseur du serpent
+            <span class="setting-val" id="val-thickness">Normal</span>
+          </label>
+          <input class="slider" type="range" id="slider-thickness" min="1" max="3" value="2">
+        </div>
+
+      </div>
+      <div class="modal-foot">
+        <button class="btn-primary" id="save-settings">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>

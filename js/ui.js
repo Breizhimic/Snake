@@ -372,7 +372,7 @@ class SnakeUI {
   /* --- Share score --------------------------------------- */
   _shareScore() {
     const score = this._lastStats?.score || 0;
-    const text = `J'ai marqué ${score} points au Snake 🐍 ! Peux-tu faire mieux ?`;
+    const text = `J'ai marqué ${score} points au Snake 🐍 ! Peux-tu faire mieux ? Viens essayer de me battre : https://breizhimic.github.io/Snake/`;
     navigator.clipboard?.writeText(text).then(() => {
       const btn = document.getElementById('btn-share');
       btn.textContent = '✅';

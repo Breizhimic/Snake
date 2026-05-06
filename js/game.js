@@ -250,6 +250,10 @@ class Game {
     this._powerUpActiveStart = 0;
     this.maxLength = this.snake.length;
 
+    // Obstacles en cours d'apparition (clignotement) : pas encore dangereux
+    // Chaque entrée : { x, y, blinkCount } — blinkCount passe de 0 à 4 (2 ON + 2 OFF)
+    this.pendingObstacles = [];
+
     this._spawnFruit();
     this._spawnObstacles();
     this._tickInterval = this._speedToInterval(this.baseSpeed);
@@ -265,6 +269,7 @@ class Game {
     if (this.snake.some(s => s.x === x && s.y === y)) return false;
     if (this.fruits.some(f => f.x === x && f.y === y)) return false;
     if (this.obstacles.some(o => o.x === x && o.y === y)) return false;
+    if (this.pendingObstacles.some(o => o.x === x && o.y === y)) return false;
     if (this.powerUpItem && this.powerUpItem.x === x && this.powerUpItem.y === y) return false;
     return true;
   }
@@ -286,13 +291,19 @@ class Game {
   }
 
   _spawnObstacles() {
-    this.obstacles = [];
+    // On ne spawne rien si des blocs clignotent encore (attente de leur solidification)
+    if (this.pendingObstacles.length > 0) return;
     if (this.fruitsEaten === 0) return;
 
     const count = Math.min(Math.floor(this.fruitsEaten / 10) * 2, 12);
-    const mid = Math.floor(this.gridSize / 2);
+    const currentCount = this.obstacles.length;
+    const toSpawn = count - currentCount;
+    if (toSpawn <= 0) return;
 
-    for (let i = 0; i < count; i++) {
+    const mid = Math.floor(this.gridSize / 2);
+    const newPending = [];
+
+    for (let i = 0; i < toSpawn; i++) {
       let tries = 0;
       let cell;
       do {
@@ -301,10 +312,40 @@ class Game {
       } while (
         tries < 100 &&
         (!this._isFree(cell.x, cell.y) ||
-          (Math.abs(cell.x - mid) < 3 && Math.abs(cell.y - mid) < 3))
+          (Math.abs(cell.x - mid) < 3 && Math.abs(cell.y - mid) < 3) ||
+          newPending.some(p => p.x === cell.x && p.y === cell.y))
       );
-      if (tries < 100) this.obstacles.push(cell);
+      if (tries < 100) newPending.push({ x: cell.x, y: cell.y, blinkCount: 0 });
     }
+
+    this.pendingObstacles = newPending;
+    if (newPending.length > 0) this._startObstacleBlink();
+  }
+
+  /* Anime le clignotement : 4 demi-cycles = 2 flashs ON/OFF, puis solidification */
+  _startObstacleBlink() {
+    const BLINK_HALF_DURATION = 350; // ms par demi-cycle (ON ou OFF)
+    const TOTAL_HALF_CYCLES   = 4;   // 2 flashs complets (ON-OFF-ON-OFF)
+
+    const tick = () => {
+      if (this.state === 'gameover') return;
+      if (this.pendingObstacles.length === 0) return;
+
+      // Avance tous les blocs d'un demi-cycle
+      this.pendingObstacles.forEach(o => o.blinkCount++);
+
+      if (this.pendingObstacles[0].blinkCount >= TOTAL_HALF_CYCLES) {
+        // Solidification : les blocs deviennent dangereux
+        for (const o of this.pendingObstacles) {
+          this.obstacles.push({ x: o.x, y: o.y });
+        }
+        this.pendingObstacles = [];
+      } else {
+        setTimeout(tick, BLINK_HALF_DURATION);
+      }
+    };
+
+    setTimeout(tick, BLINK_HALF_DURATION);
   }
 
   _trySpawnPowerUp() {
@@ -532,12 +573,25 @@ class Game {
       ctx.stroke();
     }
 
-    /* Obstacles */
+    /* Obstacles (solides — dangereux) */
     for (const o of this.obstacles) {
       ctx.fillStyle = skin.obstacle || '#475569';
       ctx.fillRect(o.x * cellSize, o.y * cellSize, cellSize, cellSize);
       ctx.fillStyle = 'rgba(0,0,0,.3)';
       ctx.fillRect(o.x * cellSize + 2, o.y * cellSize + 2, cellSize - 4, cellSize - 4);
+    }
+
+    /* Obstacles en attente (clignotement) — pas encore dangereux.
+       blinkCount pair = visible (ON), impair = invisible (OFF) */
+    for (const o of this.pendingObstacles) {
+      if (o.blinkCount % 2 === 0) {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = skin.obstacle || '#475569';
+        ctx.fillRect(o.x * cellSize, o.y * cellSize, cellSize, cellSize);
+        ctx.fillStyle = 'rgba(255,255,100,.35)';
+        ctx.fillRect(o.x * cellSize + 2, o.y * cellSize + 2, cellSize - 4, cellSize - 4);
+        ctx.globalAlpha = 1;
+      }
     }
 
     /* Power-up item (blinking) */

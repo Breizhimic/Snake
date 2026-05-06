@@ -65,7 +65,12 @@ class SnakeUI {
 
   _resizeCanvas() {
     const container = document.getElementById('swipe-zone');
-    const size = Math.min(container.clientWidth, container.clientHeight, 540);
+    const available = Math.min(container.clientWidth, container.clientHeight, 540);
+    // On force la taille du canvas à être un multiple exact de gridSize
+    // pour éviter qu'il reste des "demi-carrés" sur les bords droite/bas.
+    const gs = (this.settings && this.settings.gridSize) || 20;
+    const cellSize = Math.max(1, Math.floor(available / gs));
+    const size = cellSize * gs;
     this.canvas.width  = size;
     this.canvas.height = size;
   }
@@ -520,6 +525,11 @@ class SnakeUI {
     this.game.gridSize  = s.gridSize;
     this.game.snakePad  = 4 - s.thickness;
     this.game._tickInterval = this.game._speedToInterval(s.baseSpeed);
+
+    // Recalcule la taille du canvas en fonction du nouveau gridSize
+    // pour qu'il reste un multiple exact (sinon "demi-carrés" sur les bords).
+    this._resizeCanvas();
+    this.game.resize();
 
     if (s.skin) {
       this._applySkin(s.skin);

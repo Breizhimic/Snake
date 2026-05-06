@@ -641,7 +641,11 @@ class Game {
   /* --- Canvas resize ------------------------------------ */
   resize() {
     const container = this.canvas.parentElement;
-    const size = Math.min(container.clientWidth, container.clientHeight);
+    const available = Math.min(container.clientWidth, container.clientHeight);
+    // On force la taille du canvas à être un multiple exact de gridSize
+    // pour éviter qu'il reste des "demi-carrés" sur les bords.
+    const cellSize = Math.floor(available / this.gridSize);
+    const size = cellSize * this.gridSize;
     this.canvas.width  = size;
     this.canvas.height = size;
     this._render();
